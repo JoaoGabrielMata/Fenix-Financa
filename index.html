@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fênix Financeira</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-image: url('https://images.unsplash.com/photo-1588776814546-04e52c04f662?auto=format&fit=crop&w=1500&q=80');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+    .overlay {
+      background-color: rgba(0, 0, 0, 0.75);
+      min-height: 100vh;
+      color: white;
+      padding: 2rem;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 2.5rem;
+      color: #ffd369;
+    }
+    nav {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+    nav button {
+      background: #222;
+      border: none;
+      color: #ffd369;
+      padding: 10px 20px;
+      margin: 0 10px;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    nav button.active {
+      background: #ffd369;
+      color: black;
+    }
+    section {
+      display: none;
+    }
+    section.active {
+      display: block;
+    }
+    .card {
+      background-color: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+    }
+    input, button {
+      padding: 8px;
+      width: 100%;
+      margin: 5px 0;
+      border: none;
+      border-radius: 5px;
+    }
+    input { background-color: #eee; }
+    button.submit {
+      background-color: #ffd369;
+      color: black;
+      font-weight: bold;
+    }
+    ul { list-style: none; padding-left: 0; margin-top: 10px; }
+    li {
+      background: rgba(255,255,255,0.05);
+      padding: 8px;
+      border-radius: 5px;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .progress-bar {
+      background: #444;
+      border-radius: 5px;
+      overflow: hidden;
+      height: 20px;
+      margin-top: 8px;
+    }
+    .progress {
+      height: 100%;
+      background: #00ff88;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    #mensagemMeta {
+      margin-top: 1rem;
+      font-weight: bold;
+      color: #ffd369;
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <header>
+      <h1>💸 Fênix Financeira</h1>
+      <p>Renasça financeiramente com controle e metas reais.</p>
+    </header>
+
+    <nav>
+      <button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
+      <button class="tab" onclick="showTab('metas')">Metas</button>
+      <button class="tab" onclick="showTab('registros')">Registros</button>
+    </nav>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="active">
+      <div class="card">
+        <h2>📊 Visão Geral</h2>
+        <p id="saldo">Saldo atual: R$ 0,00</p>
+        <p id="ganhos">Receitas: R$ 0,00</p>
+        <p id="gastos">Despesas: R$ 0,00</p>
+      </div>
+    </section>
+
+    <!-- METAS -->
+    <section id="metas">
+      <div class="card">
+        <h2>🎯 Criar Meta</h2>
+        <input type="text" id="metaNome" placeholder="Ex: Quitar dívidas">
+        <input type="number" id="metaValor" placeholder="Valor da meta">
+        <input type="number" id="metaAtual" placeholder="Quanto já poupou?">
+        <input type="date" id="metaData" />
+        <button class="submit" onclick="criarMeta()">Salvar Meta</button>
+        <div id="metaResultado">
+          <p id="metaTexto"></p>
+          <div class="progress-bar">
+            <div class="progress" id="metaBarra"></div>
+          </div>
+          <p id="mensagemMeta"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- REGISTROS -->
+    <section id="registros">
+      <div class="card">
+        <h2>➕ Receita</h2>
+        <input type="text" id="descReceita" placeholder="Descrição">
+        <input type="number" id="valorReceita" placeholder="Valor">
+        <button class="submit" onclick="adicionarReceita()">Adicionar</button>
+        <ul id="listaReceitas"></ul>
+      </div>
+
+      <div class="card">
+        <h2>➖ Despesa</h2>
+        <input type="text" id="descDespesa" placeholder="Descrição">
+        <input type="number" id="valorDespesa" placeholder="Valor">
+        <button class="submit" onclick="adicionarDespesa()">Adicionar</button>
+        <ul id="listaDespesas"></ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let receitas = JSON.parse(localStorage.getItem("receitas")) || [];
+    let despesas = JSON.parse(localStorage.getItem("despesas")) || [];
+
+    function showTab(tabId) {
+      document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    function atualizarDashboard() {
+      let totalReceitas = receitas.reduce((t, r) => t + r.valor, 0);
+      let totalDespesas = despesas.reduce((t, d) => t + d.valor, 0);
+      let saldo = totalReceitas - totalDespesas;
+
+      document.getElementById("ganhos").innerText = `Receitas: R$ ${totalReceitas.toFixed(2)}`;
+      document.getElementById("gastos").innerText = `Despesas: R$ ${totalDespesas.toFixed(2)}`;
+      document.getElementById("saldo").innerText = `Saldo atual: R$ ${saldo.toFixed(2)}`;
+
+      return saldo;
+    }
+
+    function renderizarListas() {
+      let ulR = document.getElementById("listaReceitas");
+      let ulD = document.getElementById("listaDespesas");
+      ulR.innerHTML = "";
+      ulD.innerHTML = "";
+
+      receitas.forEach((r, i) => {
+        let li = document.createElement("li");
+        li.innerHTML = `${r.desc} - R$ ${r.valor.toFixed(2)} <button onclick="removerReceita(${i})">🗑️</button>`;
+        ulR.appendChild(li);
+      });
+
+      despesas.forEach((d, i) => {
+        let li = document.createElement("li");
+        li.innerHTML = `${d.desc} - R$ ${d.valor.toFixed(2)} <button onclick="removerDespesa(${i})">🗑️</button>`;
+        ulD.appendChild(li);
+      });
+    }
+
+    function adicionarReceita() {
+      let desc = document.getElementById("descReceita").value;
+      let valor = parseFloat(document.getElementById("valorReceita").value);
+      if (!desc || isNaN(valor)) return alert("Preencha corretamente");
+      receitas.push({ desc, valor });
+      localStorage.setItem("receitas", JSON.stringify(receitas));
+      document.getElementById("descReceita").value = "";
+      document.getElementById("valorReceita").value = "";
+      atualizarDashboard();
+      renderizarListas();
+    }
+
+    function adicionarDespesa() {
+      let desc = document.getElementById("descDespesa").value;
+      let valor = parseFloat(document.getElementById("valorDespesa").value);
+      if (!desc || isNaN(valor)) return alert("Preencha corretamente");
+      despesas.push({ desc, valor });
+      localStorage.setItem("despesas", JSON.stringify(despesas));
+      document.getElementById("descDespesa").value = "";
+      document.getElementById("valorDespesa").value = "";
+      atualizarDashboard();
+      renderizarListas();
+    }
+
+    function removerReceita(index) {
+      receitas.splice(index, 1);
+      localStorage.setItem("receitas", JSON.stringify(receitas));
+      atualizarDashboard();
+      renderizarListas();
+    }
+
+    function removerDespesa(index) {
+      despesas.splice(index, 1);
+      localStorage.setItem("despesas", JSON.stringify(despesas));
+      atualizarDashboard();
+      renderizarListas();
+    }
+
+    function criarMeta() {
+      let nome = document.getElementById("metaNome").value;
+      let valor = parseFloat(document.getElementById("metaValor").value);
+      let atual = parseFloat(document.getElementById("metaAtual").value);
+      let data = document.getElementById("metaData").value;
+      let mensagem = document.getElementById("mensagemMeta");
+
+      if (!nome || isNaN(valor) || isNaN(atual) || !data) {
+        mensagem.innerText = "Preencha todos os campos corretamente.";
+        return;
+      }
+
+      let saldo = atualizarDashboard();
+      if (saldo < 500) {
+        mensagem.innerText = "⚠️ Organize suas finanças antes de criar metas.";
+        return;
+      }
+
+      let margemLazer = saldo * 0.2;
+      let saldoUtilizavel = saldo - margemLazer;
+
+      let hoje = new Date();
+      let fim = new Date(data);
+      let diffMeses = (fim.getFullYear() - hoje.getFullYear()) * 12 + (fim.getMonth() - hoje.getMonth());
+
+      if (diffMeses <= 0) {
+        mensagem.innerText = "A data da meta deve ser no futuro.";
+        return;
+      }
+
+      let restante = valor - atual;
+      let porMes = restante / diffMeses;
+
+      if (porMes > saldoUtilizavel) {
+        mensagem.innerText = `⚠️ Essa meta exige R$ ${porMes.toFixed(2)} por mês, mas você só pode guardar até R$ ${saldoUtilizavel.toFixed(2)} com segurança.`;
+        return;
+      }
+
+      let porcentagem = Math.min((atual / valor) * 100, 100);
+
+      document.getElementById("metaTexto").innerText =
+        `${nome} — R$ ${atual.toFixed(2)} de R$ ${valor.toFixed(2)} (${porcentagem.toFixed(0)}%)`;
+      document.getElementById("metaBarra").style.width = `${porcentagem}%`;
+      mensagem.innerText = `✅ Para alcançar essa meta até ${data}, guarde R$ ${porMes.toFixed(2)} por mês. (Deixando R$ ${margemLazer.toFixed(2)} para lazer)`;
+    }
+
+    // Inicialização
+    atualizarDashboard();
+    renderizarListas();
+  </script>
+</body>
+</html>
